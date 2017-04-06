@@ -48,6 +48,18 @@ def fetch_api(url, token, **cus_headers):
         return response
 
 
+def get_pr_info(args):
+    ''' Get PR informations '''
+    github_token = args.github_token
+    assert github_token, "Error: Github token can not be empty."
+
+    pr_number = args.pr_number
+    assert pr_number, "Error: PR number is empty."
+
+    url = "https://api.github.com/repos/sugareps/Mango/pulls/{0:d}".format(pr_number)
+    print(fetch_api(url=url, token=github_token))
+
+
 def write_context_to_file(file_name, cmds):
     msg = None
     return_code = 0
@@ -87,15 +99,23 @@ def get_files_for_diff(args):
     将获取的文件在服务器中使用 diff 产生 patch, 在应用补丁到SC中
     由于AIX版本 diff 和 patch 版本过低, 所以需要到 server 上 patch 文件
     '''
-    base_restore_directory = args.restore_dir
+    base_restore_directory = os.environ.get('PR_NUMBER')
     need_apply_files = 'apply_files.txt'
     base_sha = args.base_sha
-    head_sha = args.head_sha
-    github_token = os.environ.get('GITHUB_TOKEN')
-    assert github_token, "Github token can not be empty."
+    assert base_sha, "Error: Github token can not be empty."
 
-    mango_work_tree = os.environ.get('MANGO_PATH')
-    assert mango_work_tree, "Mango directory can not be empty."
+    head_sha = args.head_sha
+    assert head_sha, "Error: Github token can not be empty."
+
+    github_token = args.github_token
+    assert github_token, "Error: Github token can not be empty."
+
+    pr_number = args.pr_number
+    assert pr_number, "Error: PR number is empty."
+
+    mango_work_tree = args.mango_work_tree
+    assert pr_number, "Error: PR number is empty."
+
     git_cmd = 'git --git-dir={0:s}/.git --work-tree={0:s}'.format(mango_work_tree)
 
     url = 'https://api.github.com/repos/sugareps/Mango/compare/{0:s}...{1:s}'.format(
@@ -166,6 +186,23 @@ def get_files_for_diff(args):
     file_list.close()
 
 
+def add_common_args(parser):
+    ''' Add common args '''
+    parser.add_argument('-t', '--token',
+                        action='store',
+                        dest='github_token',
+                        required=True,
+                        metavar='Github_Token',
+                        help='Github Token')
+    parser.add_argument('-p', '--pr-number',
+                        action='store',
+                        dest='pr_number',
+                        metavar='PR_Number',
+                        type=int,
+                        required=True,
+                        help='Pull Request number')
+
+
 def get_args():
     ''' 参数解析 '''
     parser = ArgumentParser(prog="util")
@@ -194,18 +231,29 @@ def get_args():
         help='Head sha'
     )
     arg_for_diff.add_argument(
-        '--restore-dir',
+        '--mongo-dir',
         action='store',
-        dest='restore_dir',
+        dest='mango_work_tree',
         required=True,
-        metavar='Restore path',
-        help='Create a new directory to restore the different files(Pass PR number as the directory name).'
+        metavar='Mango directory',
+        help='Mango directory'
     )
+
+    add_common_args(arg_for_diff)
+
+    arg_pr_info = subparsers.add_parser('pr', help='patch help')
+    arg_pr_info.add_argument('--type',
+                              dest="type",
+                              type=str,
+                              default="get_pr_info",
+                              help='Get bash and head files for a PR')
+    add_common_args(arg_pr_info)
 
     args = parser.parse_args()
     try:
         {
             'get_files_for_diff': get_files_for_diff,
+            'get_pr_info': get_pr_info
         }[args.type](args)
     except KeyError:
         print(parser.print_help())
