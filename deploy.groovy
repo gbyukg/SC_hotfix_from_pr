@@ -6,21 +6,25 @@ def WORK_SPACE_ROOT = "${env.JENKINS_HOME}/workspace/${env.JOB_NAME}"
 def SCRIPT_PATH = "${WORK_SPACE_ROOT}@script";
 def PATCH_FILE = "${WORK_SPACE_ROOT}/PATCHS"
 def UTIL_SC = "${SCRIPT_PATH}/util.py"
-def MONGO_PATH = "${WORKSPACE}/Mongo"
 
 def PR_NUMBER = params.PR_NUMBER;
 
-def github_api(String cmd, String pr_number)
+def github_api(String cmd, String pr_number, String returnType = 'getStdout')
 {
     String return_val;
         withCredentials([string(credentialsId: 'github_token', variable: 'github_token')]) {
             try {
-                // withEnv(["PR_NUMBER=${env.PR_NUMBER}", "GITHUB_TOKEN=${github_token}"]) {
-                return_val =  sh(
-                    returnStdout: true,
-                    script: "python ${cmd} -p ${pr_number} -t ${github_token}"
-                ).trim();
-                // }
+                if (returnType == 'getStdout') {
+                    return_val =  sh(
+                        returnStdout: true,
+                        script: "python ${cmd} -p ${pr_number} -t ${github_token}"
+                    ).trim();
+                } else {
+                    return_val =  sh(
+                        returnStatus: true,
+                        script: "python ${cmd} -p ${pr_number} -t ${github_token}"
+                    );
+                }
             } catch (hudson.AbortException e) {
                 if (e.getMessage().contains('script returned exit code 9')) {
                     error "Failed: PR number is empty.";
@@ -50,7 +54,6 @@ try {
     node('master') {
         stage('Getting PR info') {
             def return_val = null;
-            //withEnv(["PR_NUMBER=${PR_NUMBER}", "UTIL_SC=${UTIL_SC}"]) {
             return_val = github_api("${UTIL_SC} pr", PR_NUMBER);
 
             def jsonSlurper = new JsonSlurper();
@@ -61,22 +64,32 @@ try {
             if (!pr_info.merged) {
                 jsonSlurper = null;
                 pr_info = null;
-                def msg = "The PR [${env.PR_NUMBER} https://github.com/sugareps/Mango/pull/${env.PR_NUMBER}] has not been merged, you can't deploy this PR into SVT server";
+                def msg = "The PR [${PR_NUMBER} https://github.com/sugareps/Mango/pull/${PR_NUMBER}] has not been merged, you can't deploy this PR into SVT server";
                 echo msg
                 send_msg_slack("danger", msg);
                 error msg;
             }
 
             PR_TITLE = pr_info.title
+            PR_URL = pr_info.url
+            PR_STATE = pr_info.state
+            PR_MERGED_USER = pr_info.merged_by.login
             PR_BASE_SHA = pr_info.base.sha
             PR_BASH_REF = pr_info.base.ref
             PR_HEAD_SHA = pr_info.head.sha
             PR_HEAD_REF = pr_info.head.ref
+            PR_HEAD_LABEL = pr_info.head.label
+            PR_BASE_LABEL = pr_info.base.label
+
             echo """
-            PR info:
+            PR info [${PR_NUMBER}]:
+            Title: ${PR_TITLE}
+            ${PR_HEAD_LABEL} -> ${PR_BASE_LABEL}
+            PR URL: ${PR_URL}
+            PR state: ${PR_STATE}
+            Merged by: ${PR_MERGED_USER}
             Base sha: ${PR_BASE_SHA}
             Head sha: ${PR_HEAD_SHA}
-            Title: ${PR_TITLE}
             """
 
         }
@@ -124,10 +137,10 @@ try {
                 ]
             );
         }
-        stage ("Generate diff files") {
+        stage ("Generate compare diff files") {
             echo "Get diff files"
-            return_val = github_api("${UTIL_SC} patch --mongo-dir ${MONGO_PATH} --base ${PR_BASE_SHA} --head ${PR_HEAD_SHA}", PR_NUMBER);
-            if (returnCode != 0) {
+            def cmd = "${UTIL_SC} patch --mongo-dir ${WORKSPACE}/Mango --base ${PR_BASE_SHA} --head ${PR_HEAD_SHA}"
+            if (! github_api(cmd, PR_NUMBER, 'getStatus')) {
                 error "Create fix package failed."
             }
         }

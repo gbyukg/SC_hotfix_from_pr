@@ -75,6 +75,7 @@ def write_context_to_file(file_name, cmds):
         )
         std_err_msg = proc.communicate()[1]
         assert proc.returncode == 0, std_err_msg
+        print(file_name)
         #if proc.returncode != 0:
         #    std_err_msg = proc.communicate()[1]
     except OSError as e:
@@ -184,6 +185,8 @@ def get_files_for_diff(args):
 
     # 循环结束后关闭文件
     file_list.close()
+    # groovy 脚本捕获输出, 所以输出 SUCESS
+    print("SUCESS")
 
 
 def add_common_args(parser):
