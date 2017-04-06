@@ -53,6 +53,7 @@ try {
         }
         stage ("Generate diff files") {
             echo "Get diff files"
+            echo "${WORKSPACE}"
         }
     }
 } catch (exec) {
