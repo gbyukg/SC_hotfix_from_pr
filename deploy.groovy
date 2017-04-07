@@ -146,9 +146,7 @@ try {
             }
         }
         stage ("Create snapshot template") {
-            // withEnv(["PR_NUMBER=${pr_number}"]) {
             returnCode = sh returnStatus: true, script: "${UCD_SC} create_snapshot -p ${PR_NUMBER}"
-            // }
             if (returnCode != 0) {
                 error "Create snapshot failed."
             }

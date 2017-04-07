@@ -59,6 +59,7 @@ function publish_snapshot
 
 function trigger_ucd_process
 {
+    set -x
     if [[ ! -d "${PR_NUMBER}" ]]; then
         echo "Error: Directory ${PR_NUMBER} not found!"
         exit 1
@@ -67,17 +68,20 @@ function trigger_ucd_process
 
     cat <<FCH_RUN > application_tmp.json
 {
-    "application": "${SNAPSHOT_APPLICATION_NAME}",
-    "applicationProcess": "deploy quick fix",
-    "description": "The process was kicked off from Jenkins by user ${BUILD_USER}",
+    "application": "${UCD_APPLICATION_NAME}",
+    "applicationProcess": "${UCD_APPLICATION_PROCESS}",
+    "description": "The process was kicked off from Jenkins.",
     "environment": "$SERVER_ENV",
     "onlyChanged": "false",
     "post-deploy-message": "requestApplicationProcess - deployed quick fix.",
-    "snapshot": "${PR_NUMBER}_PR_HOTFIX"
+    "snapshot": "${PR_NUMBER}_PR_HOTFIX",
+    "properties": {
+        "PR_NUMBER":"${PR_NUMBER}"
+    }
 }
 FCH_RUN
 
-cat application_tmp.json
+    "${PHP}"  "${UCMD_PATH}"/ucommand.php --action=runAndWait --file="${WORKSPACE}/${PR_NUMBER}/application_tmp.json"
 }
 
 __main()
@@ -137,7 +141,6 @@ __main()
     ${fun}
 }
 
-set -x
 cd "${WORKSPACE}" || exit 1
 
 __main "$@"
