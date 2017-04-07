@@ -102,11 +102,13 @@ def get_files_for_diff(args):
     '''
     base_restore_directory = os.environ.get('PR_NUMBER')
     need_apply_files = 'apply_files.txt'
+    assert need_apply_files, "Error: Restore applied file name can not be empty."
+
     base_sha = args.base_sha
-    assert base_sha, "Error: Github token can not be empty."
+    assert base_sha, "Error: Bash sha can not be empty."
 
     head_sha = args.head_sha
-    assert head_sha, "Error: Github token can not be empty."
+    assert head_sha, "Error: Head sha can not be empty."
 
     github_token = args.github_token
     assert github_token, "Error: Github token can not be empty."
@@ -240,6 +242,14 @@ def get_args():
         required=True,
         metavar='Mango directory',
         help='Mango directory'
+    )
+    arg_for_diff.add_argument(
+        '--applied-file-name',
+        action='store',
+        dest='need_apply_files',
+        required=True,
+        metavar='The file name that used to resotre the files can applied',
+        help='The file name that used to resotre the files can applied'
     )
 
     add_common_args(arg_for_diff)

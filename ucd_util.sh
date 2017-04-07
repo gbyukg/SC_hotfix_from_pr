@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 
-
-CAN_APPLY_FILES="apply_files.txt"
-SNAPSHOT_TEMPLATE="snapshot.php"
-UCD_APPLICATION_NAME="ApplyHotfixForSC.DEV"
-UCD_GENERATE_PATCH_FILE_COMPONENT="Generate-patch-file.DEV"
-PR_NUMBER=31732
+#CAN_APPLY_FILES="apply_files.txt"
+#SNAPSHOT_TEMPLATE="snapshot.php"
+#UCD_APPLICATION_NAME="ApplyHotfixForSC.DEV"
+#UCD_GENERATE_PATCH_FILE_COMPONENT="Generate-patch-file.DEV"
+#PR_NUMBER=31732
 
 function create_snapshot
 {

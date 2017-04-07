@@ -139,9 +139,17 @@ try {
         }
         stage ("Generate compare diff files") {
             echo "Get diff files"
-            def cmd = "${UTIL_SC} patch --mongo-dir ${WORKSPACE}/Mango --base ${PR_BASE_SHA} --head ${PR_HEAD_SHA}"
+            def cmd = "${UTIL_SC} patch --applied-file-name ${env.CAN_APPLY_FILES} --mongo-dir ${WORKSPACE}/Mango --base ${PR_BASE_SHA} --head ${PR_HEAD_SHA}"
             if (! github_api(cmd, PR_NUMBER, 'getStatus')) {
                 error "Create fix package failed."
+            }
+        }
+        stage ("Create snapshot") {
+            withEnv(["SIM_SETUP=${SCRIPT_PATH}", "PR_NUMBER=${pr_number}"]) {
+                returnCode = sh returnStatus: true, script: "${SCRIPT_PATH}/ucd_util.sh create_snapshot"
+            }
+            if (returnCode != 0) {
+                error "Create snapshot failed."
             }
         }
     }
