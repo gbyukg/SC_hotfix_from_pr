@@ -8,6 +8,7 @@
 
 function create_snapshot
 {
+    set -x
     [[ -z "${PR_NUMBER}" ]] && echo "Error: PR is empty, please set PR_NUMBER environment variable." && exit 1
 
     if [[ ! -d "${PR_NUMBER}" ]]; then
@@ -73,6 +74,8 @@ __main()
 
     ${fun}
 }
+
+cd "${WORKSPACE}" || exit 1
 
 __main "$@"
 

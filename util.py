@@ -187,8 +187,6 @@ def get_files_for_diff(args):
 
     # 循环结束后关闭文件
     file_list.close()
-    # groovy 脚本捕获输出, 所以输出 SUCESS
-    print("SUCESS")
 
 
 def add_common_args(parser):

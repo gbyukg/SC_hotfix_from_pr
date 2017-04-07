@@ -144,7 +144,7 @@ try {
                 error "Create fix package failed."
             }
         }
-        stage ("Create snapshot") {
+        stage ("Create snapshot template") {
             withEnv(["SIM_SETUP=${SCRIPT_PATH}", "PR_NUMBER=${pr_number}"]) {
                 returnCode = sh returnStatus: true, script: "${SCRIPT_PATH}/ucd_util.sh create_snapshot"
             }
