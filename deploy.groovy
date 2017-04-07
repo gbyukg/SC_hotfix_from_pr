@@ -6,6 +6,7 @@ def WORK_SPACE_ROOT = "${env.JENKINS_HOME}/workspace/${env.JOB_NAME}"
 def SCRIPT_PATH = "${WORK_SPACE_ROOT}@script";
 def PATCH_FILE = "${WORK_SPACE_ROOT}/PATCHS"
 def UTIL_SC = "${SCRIPT_PATH}/util.py"
+def UCD_SC = "${SCRIPT_PATH}/ucd_util.sh"
 
 def PR_NUMBER = params.PR_NUMBER;
 
@@ -145,8 +146,25 @@ try {
             }
         }
         stage ("Create snapshot template") {
-            withEnv(["SIM_SETUP=${SCRIPT_PATH}", "PR_NUMBER=${pr_number}"]) {
-                returnCode = sh returnStatus: true, script: "${SCRIPT_PATH}/ucd_util.sh create_snapshot"
+            // withEnv(["PR_NUMBER=${pr_number}"]) {
+            returnCode = sh returnStatus: true, script: "${UCD_SC} create_snapshot -p ${PR_NUMBER}"
+            // }
+            if (returnCode != 0) {
+                error "Create snapshot failed."
+            }
+        }
+        stage ("Publish snapshot") {
+            String PHP = tool name: 'php', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
+            withEnv(["PHP=${PHP}/bin/php"]) {
+                returnCode = sh returnStatus: true, script: "${UCD_SC} publish_snapshot -p ${PR_NUMBER}"
+            }
+            if (returnCode != 0) {
+                error "Publish snapshot failed."
+            }
+        }
+        stage ("Trigger UCD process") {
+            withEnv(["PHP=${PHP}/bin/php"]) {
+                returnCode = sh returnStatus: true, script: "${UCD_SC} trigger_ucd -p ${PR_NUMBER}"
             }
             if (returnCode != 0) {
                 error "Create snapshot failed."

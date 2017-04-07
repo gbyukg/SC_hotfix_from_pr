@@ -8,7 +8,6 @@
 
 function create_snapshot
 {
-    set -x
     [[ -z "${PR_NUMBER}" ]] && echo "Error: PR is empty, please set PR_NUMBER environment variable." && exit 1
 
     if [[ ! -d "${PR_NUMBER}" ]]; then
@@ -44,26 +43,89 @@ SNAPSHOT
 
 function publish_snapshot
 {
-    [[ -z "${PR_NUMBER}" ]] && echo "Error: PR is empty, please set PR_NUMBER environment variable." && exit 1
+    if [[ ! -d "${PR_NUMBER}" ]]; then
+        echo "Error: Directory ${PR_NUMBER} not found!"
+        exit 1
+    fi
+    cd "${PR_NUMBER}" || exit 1
 
-    if [[ ! -f "${PR_NUMBER}/${CAN_APPLY_FILES}" ]]; then
+    if [[ ! -f "${SNAPSHOT_TEMPLATE}" ]]; then
         echo "Error: Snapshot file doesn't exists."
         exit 1
     fi
 
-    php ucommand.php --action="createVersionsAndSnapshot" --file="${PR_NUMBER}/${CAN_APPLY_FILES}" --force
+    "${PHP}" "${UCMD_PATH}"/ucommand.php --action="createVersionsAndSnapshot" --file="${WORKSPACE}/${PR_NUMBER}/${SNAPSHOT_TEMPLATE}" --force
+}
+
+function trigger_ucd_process
+{
+    if [[ ! -d "${PR_NUMBER}" ]]; then
+        echo "Error: Directory ${PR_NUMBER} not found!"
+        exit 1
+    fi
+    cd "${PR_NUMBER}" || exit 1
+
+    cat <<FCH_RUN > application_tmp.json
+{
+    "application": "${SNAPSHOT_APPLICATION_NAME}",
+    "applicationProcess": "deploy quick fix",
+    "description": "The process was kicked off from Jenkins by user ${BUILD_USER}",
+    "environment": "$SERVER_ENV",
+    "onlyChanged": "false",
+    "post-deploy-message": "requestApplicationProcess - deployed quick fix.",
+    "snapshot": "${PR_NUMBER}_PR_HOTFIX"
+}
+FCH_RUN
+
+cat application_tmp.json
 }
 
 __main()
 {
     case $1 in
+        trigger_ucd )
+            fun="trigger_ucd_process"
+            shift
+            while getopts "p:" opt; do
+                case $opt in
+                    p ) PR_NUMBER="$OPTARG"
+                        ;;
+                    \?) echo "$0 -p PR_NUMBER"
+                        exit 1
+                        ;;
+                esac
+            done
+            shift $((OPTIND-1))
+            [[ -z "${PR_NUMBER}" ]] && echo "PR is empty: [$0 create_snapshot -p PR_NUMBER]" && exit 1
+            ;;
         create_snapshot )
             fun="create_snapshot"
             shift
+            while getopts "p:" opt; do
+                case $opt in
+                    p ) PR_NUMBER="$OPTARG"
+                        ;;
+                    \?) echo "$0 -p PR_NUMBER"
+                        exit 1
+                        ;;
+                esac
+            done
+            shift $((OPTIND-1))
+            [[ -z "${PR_NUMBER}" ]] && echo "PR is empty: [$0 create_snapshot -p PR_NUMBER]" && exit 1
             ;;
         publish_snapshot )
             fun="publish_snapshot"
             shift
+            while getopts "p:" opt; do
+                case $opt in
+                    p ) PR_NUMBER="$OPTARG"
+                        ;;
+                    \?) echo "$0 -p PR_NUMBER"
+                        exit 1
+                        ;;
+                esac
+            done
+            shift $((OPTIND-1))
             [[ -z "${PR_NUMBER}" ]] && echo "PR is empty: [$0 create_snapshot -p PR_NUMBER]" && exit 1
             ;;
         * )
@@ -75,6 +137,7 @@ __main()
     ${fun}
 }
 
+set -x
 cd "${WORKSPACE}" || exit 1
 
 __main "$@"
