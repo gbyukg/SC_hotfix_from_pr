@@ -163,6 +163,7 @@ try {
             }
         }
         stage ("Trigger UCD process") {
+            String PHP = tool name: 'php', type: 'com.cloudbees.jenkins.plugins.customtools.CustomTool'
             withEnv(["PHP=${PHP}/bin/php"]) {
                 returnCode = sh returnStatus: true, script: "${UCD_SC} trigger_ucd -p ${PR_NUMBER}"
             }
